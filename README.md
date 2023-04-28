@@ -22,3 +22,4 @@ LINK TO GITHUB REPOSITORY
 https://github.com/GitOutOfHereNow/ST10082035_PROG6221_POE_Part1
 
 ==================
+![Commits](https://user-images.githubusercontent.com/127477086/235207706-24bd1c6d-38df-4a5a-8435-0c88a1d07ca6.png)
