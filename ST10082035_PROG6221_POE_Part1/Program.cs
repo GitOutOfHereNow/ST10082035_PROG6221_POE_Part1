@@ -161,6 +161,7 @@ namespace recipeApplication
                 Console.WriteLine("6. Exit");
 
                 int command = int.Parse(Console.ReadLine());
+// switch statement to allow users to make a selection for their recipe application
 
                 switch (command)
                 {
