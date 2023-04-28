@@ -9,7 +9,7 @@ LAUNCHING THE APPLICATION
 
 PREREQUISITE: Have the latest version of Visual Studio downloaded
 
-To lauch the application, download the file, and double click the application named ST10082035_PROG6221_POE_Part1.csproj
+To lauch the application, download the file, and double click the application named Program.cs
 
 This will open the project folder and allow you to view the code. To execute the code, run the Program.cs file in your Visual Studio Editor.
 
