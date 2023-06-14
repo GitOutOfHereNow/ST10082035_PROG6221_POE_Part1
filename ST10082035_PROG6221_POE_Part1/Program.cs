@@ -1,196 +1,491 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Threading.Tasks.Dataflow;
 
-namespace recipeApplication
+namespace RecipeApp
 {
+    //============================= Delegate that will later notify the user when a recipe exceeds 300 calories ============================================
+    public delegate void RecipeCaloriesExceededEventHandler();
 
-    /// <summary>
-    /// Student Number: ST10082035
-    /// Student Name: Adrian Silver
-    /// Module Code: PROG6221
-    /// POE PART 1
-    /// The recipe class stores the bulk of the applications processes in the form of multiple methods
-    /// </summary>
-    class Recipe
+    // Enum for food groups
+    public enum FoodGroup
     {
-        //declarations of variables and arrays
-        private int numIngredients;
-        private string[] ingredientNames;
-        private double[] ingredientQuantities;
-        private string[] ingredientUnits;
-        private int numSteps;
-        private string[] steps;
-        private double[] originalQuantities;
+        StarchyFoods,
+        VegetablesAndFruits,
+        DryBeansPeasLentilsSoya,
+        ChickenFishMeatEggs,
+        MilkDairyProducts,
+        FatsAndOil,
+        Water
+    }
+    //===============================   Ingredient Class   ===================================================================================================
 
+    public class Ingredient
+    {
+        public string Name { get; set; }
+        public double Quantity { get; set; }
+        public string Unit { get; set; }
+        public int Calories { get; set; }
+        public FoodGroup FoodGroup { get; set; }
+    }
+    //============================EndOfClass============================================================================================================
 
-        /// <summary>
-        /// EnterRecipe() Method takes user input when called from the Main Method and fills in the major fields such as name of ingredients, quantity of ingredients, etc.
-        /// </summary>
-        public void EnterRecipe()
+    //=========================== Recipe class =========================================================================================================
+    public class Recipe
+    {
+        private List<Ingredient> ingredients;
+        private List<string> steps;
+
+        public event RecipeCaloriesExceededEventHandler CaloriesExceeded;
+
+        public string Name { get; set; }
+        public List<Ingredient> Ingredients
         {
-            Console.Write("Enter the number of ingredients: ");
-            numIngredients = int.Parse(Console.ReadLine());
+            get { return ingredients; }
+            set { ingredients = value; }
+        }
+        public List<string> Steps
+        {
+            get { return steps; }
+            set { steps = value; }
+        }
+        public double ScaleFactor { get; set; }
 
-            ingredientNames = new string[numIngredients];
-            ingredientQuantities = new double[numIngredients];
-            ingredientUnits = new string[numIngredients];
-            originalQuantities = new double[numIngredients];
+        public Recipe()
+        {
+            Ingredients = new List<Ingredient>();
+            Steps = new List<string>();
+            ScaleFactor = 1;
+        }
 
-            //for loop to iterate details for name, quantity and unit of measurement based on how many ingredients were entered by the user
-            //Additionally, there has been 1 more array declared, namely originalQuantities: this takes the original quantity that the user first enters for each ingredient in the ingredientQuantities array and stores it in a copy to revert to when a user resets to original values
-            for (int i = 0; i < numIngredients; i++)
+        //========================== Method to calculate total calories of the recipe ==============================================================
+        public int CalculateTotalCalories()
+        {
+            int totalCalories = 0;
+            foreach (Ingredient ingredient in Ingredients)
             {
-                Console.Write("Enter the name of ingredient #{0}: ", i + 1);
-                ingredientNames[i] = Console.ReadLine();
+                totalCalories += ingredient.Calories;
+            }
+            return totalCalories;
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        //======================= Method to check if the recipe exceeds 300 calories================================================================
+        public void CheckCaloriesExceeded()
+        {
+            if (CalculateTotalCalories() > 300)
+            {
+                if (CaloriesExceeded != null)
+                {
+                    CaloriesExceeded.Invoke();
+                }
+            }
+        }
+    }
+    //============================EndOfClass============================================================================================================
 
 
-                Console.Write("Enter the quantity of ingredient #{0}: ", i + 1);
-                ingredientQuantities[i] = double.Parse(Console.ReadLine());
-                originalQuantities[i] = ingredientQuantities[i];
+    //=========================== RecipeApp class =====================================================================================================
+    public class RecipeApp
+    {
+        private List<Recipe> recipes;
 
-                Console.Write("Enter the unit of measurement of ingredient #{0}: ", i + 1);
-                ingredientUnits[i] = Console.ReadLine();
+        public RecipeApp()
+        {
+            recipes = new List<Recipe>();
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        //======================================= Method to add a recipe ===========================================================================
+        public void AddRecipe(Recipe recipe)
+        {
+            recipes.Add(recipe);
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        // =======================================Method to display all recipes recorded ===========================================================
+        public void DisplayRecipes()
+        {
+            if (recipes.Count == 0)
+            {
+                Console.WriteLine("No recipes found.");
+                return;
+            }
+
+            Console.WriteLine("Recipes:");
+            for (int i = 0; i < recipes.Count; i++)
+            {
+                Console.WriteLine($"{i + 1}. {recipes[i].Name}");
+            }
+
+            Console.Write("Enter the number of the recipe to view: ");
+            int recipeIndex = Convert.ToInt32(Console.ReadLine());
+
+            if (recipeIndex >= 1 && recipeIndex <= recipes.Count)
+            {
+                Recipe selectedRecipe = recipes[recipeIndex - 1];
+                Console.WriteLine("Recipe: " + selectedRecipe.Name);
+                Console.WriteLine("Ingredients:");
+                foreach (Ingredient ingredient in selectedRecipe.Ingredients)
+                {
+                    Console.WriteLine("- " + ingredient.Name + ": " + ingredient.Quantity + " " + ingredient.Unit);
+                }
+                Console.WriteLine("Total Calories: " + selectedRecipe.CalculateTotalCalories());
+                Console.WriteLine("Steps:");
+                for (int i = 0; i < selectedRecipe.Steps.Count; i++)
+                {
+                    Console.WriteLine((i + 1) + ". " + selectedRecipe.Steps[i]);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid recipe number.");
+            }
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        //============================== Method to display a single recipe by searching by name ====================================================
+        public void DisplayRecipe(string recipeName)
+        {
+            Recipe recipe = GetRecipeByName(recipeName);
+
+            if (recipe != null)
+            {
+                Console.WriteLine("Recipe: " + recipe.Name);
+                Console.WriteLine("Ingredients:");
+                foreach (Ingredient ingredient in recipe.Ingredients)
+                {
+                    Console.WriteLine("- " + ingredient.Name + ": " + ingredient.Quantity + " " + ingredient.Unit);
+                }
+                Console.WriteLine("Total Calories: " + recipe.CalculateTotalCalories());
+                Console.WriteLine("Steps:");
+                for (int i = 0; i < recipe.Steps.Count; i++)
+                {
+                    Console.WriteLine((i + 1) + ". " + recipe.Steps[i]);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Recipe not found!");
+            }
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        //============================= Method to scale a recipe ===================================================================================
+        public void ScaleRecipe(string recipeName, double factor)
+        {
+            Recipe recipe = GetRecipeByName(recipeName);
+            if (recipe != null)
+            {
+                Console.WriteLine($"Scaling options for recipe '{recipe.Name}':");
+                Console.WriteLine("1. Half");
+                Console.WriteLine("2. Double");
+                Console.WriteLine("3. Triple");
+                Console.Write("Enter the number of the scale option: ");
+                string scaleOption = Console.ReadLine();
+
+                switch (scaleOption)
+                {
+                    case "1":
+                        factor = 0.5;
+                        break;
+                    case "2":
+                        factor = 2.0;
+                        break;
+                    case "3":
+                        factor = 3.0;
+                        break;
+                    default:
+                        Console.WriteLine("Invalid scale option. Recipe not scaled.");
+                        return;
+                }
+
+                foreach (Ingredient ingredient in recipe.Ingredients)
+                {
+                    ingredient.Quantity *= factor;
+                    ingredient.Calories = (int)(ingredient.Calories * factor);
+                }
+                Console.WriteLine("Recipe scaled successfully.");
+            }
+            else
+            {
+                Console.WriteLine("Recipe not found!");
+            }
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        //============================ Method to reset the recipe quantities to original values ====================================================
+        public void ResetRecipe(string recipeName)
+        {
+            Recipe recipe = GetRecipeByName(recipeName);
+
+            if (recipe != null)
+            {
+                double resetFactor = 1 / recipe.ScaleFactor;
+
+                foreach (Ingredient ingredient in recipe.Ingredients)
+                {
+                    ingredient.Quantity *= resetFactor;
+
+                }
+
+                recipe.ScaleFactor = 1;
+
+                Console.WriteLine("Recipe quantities reset successfully!");
+            }
+            else
+            {
+                Console.WriteLine("Recipe not found!");
+            }
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        //==================== Method to clear the data of a recipe ================================================================================
+        public void ClearRecipe(string recipeName)
+        {
+            Recipe recipe = GetRecipeByName(recipeName);
+
+            if (recipe != null)
+            {
+                recipe.Ingredients.Clear();
+                recipe.Steps.Clear();
+                recipe.ScaleFactor = 1;
+
+                Console.WriteLine("Recipe cleared successfully!");
+            }
+            else
+            {
+                Console.WriteLine("Recipe not found!");
+            }
+        }
+
+        //==================== EndOfMethod =========================================================================================================
+
+        //==================== Helper method to get a recipe by name ===============================================================================
+        private Recipe GetRecipeByName(string recipeName)
+        {
+            return recipes.Find(recipe => recipe.Name.Equals(recipeName));
+        }
+
+
+    }
+    //==================== EndOfMethod =========================================================================================================
+
+    //============================EndOfClass============================================================================================================
+
+    // ========================= Unit test for total calorie calculation ===========================================================================
+    public class RecipeUnitTest
+    {
+        public static void TestTotalCaloriesCalculation()
+        {
+            Recipe recipe = new Recipe();
+            recipe.Ingredients.Add(new Ingredient { Name = "Sugar", Quantity = 2, Unit = "tablespoons", Calories = 100 });
+            recipe.Ingredients.Add(new Ingredient { Name = "Flour", Quantity = 1, Unit = "cup", Calories = 150 });
+            recipe.Ingredients.Add(new Ingredient { Name = "Butter", Quantity = 3, Unit = "tablespoons", Calories = 200 });
+
+            int totalCalories = recipe.CalculateTotalCalories();
+
+            Console.WriteLine("Total calories: " + totalCalories);
+        }
+    }
+    //============================EndOfClass============================================================================================================
+    //============================ Program Class containing the Main Method () =========================================================================
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            RecipeApp recipeApp = new RecipeApp();
+
+            RunRecipeApp(recipeApp);
+        }
+
+        //====================================== Method to run the Recipe App ====================================================================
+        static void RunRecipeApp(RecipeApp recipeApp)
+        {
+            while (true)
+            {
+                Console.WriteLine("==========================================================================================================");
+                Console.WriteLine("============================WELCOME TO THE RECIPE CREATION APPLICATION====================================");
+                Console.WriteLine("==========================================================================================================");
+                Console.WriteLine("1. Add Recipe");
+                Console.WriteLine("2. Display Recipes");
+                Console.WriteLine("3. Display Recipe");
+                Console.WriteLine("4. Scale Recipe");
+                Console.WriteLine("5. Reset Recipe Quantities");
+                Console.WriteLine("6. Clear Recipe");
+                Console.WriteLine("7. Exit");
+                Console.Write("Enter your choice: ");
+                int choice = Convert.ToInt32(Console.ReadLine());
+
+                switch (choice)
+                {
+                    case 1:
+                        AddRecipe(recipeApp);
+                        break;
+                    case 2:
+                        recipeApp.DisplayRecipes();
+                        break;
+                    case 3:
+                        Console.Write("Enter recipe name: ");
+                        string recipeName = Console.ReadLine();
+                        recipeApp.DisplayRecipe(recipeName);
+                        break;
+                    case 4:
+                        ScaleRecipe(recipeApp);
+                        break;
+                    case 5:
+                        ResetRecipeQuantities(recipeApp);
+                        break;
+                    case 6:
+                        ClearRecipe(recipeApp);
+                        break;
+
+                    case 7:
+                        Environment.Exit(0);
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice!");
+                        break;
+                }
+
+                Console.WriteLine();
+            }
+        }
+        //==================== EndOfMethod =========================================================================================================
+
+        //======================= Method to add a recipe ===========================================================================================
+        static void AddRecipe(RecipeApp recipeApp)
+        {
+            Console.Write("Enter recipe name: ");
+            string recipeName = Console.ReadLine();
+
+            Recipe recipe = new Recipe { Name = recipeName };
+
+            Console.Write("Enter the number of ingredients: ");
+            int ingredientCount = Convert.ToInt32(Console.ReadLine());
+
+            for (int i = 0; i < ingredientCount; i++)
+            {
+                Console.WriteLine($"Enter details for Ingredient #{i + 1}");
+                Ingredient ingredient = new Ingredient();
+
+                Console.Write("Enter ingredient name: ");
+                ingredient.Name = Console.ReadLine();
+
+                Console.Write("Enter quantity: ");
+                ingredient.Quantity = Convert.ToDouble(Console.ReadLine());
+
+                Console.Write("Enter unit of measurement: ");
+                ingredient.Unit = Console.ReadLine();
+
+                Console.Write("Enter number of calories: ");
+                ingredient.Calories = Convert.ToInt32(Console.ReadLine());
+
+                Console.WriteLine("Enter food group number: " +
+                    "\r\n(1) Starchy Foods\r\n(2) Vegetables And Fruits\r\n(3) Dry Beans, Peas, Lentils, Soya\r\n(4) Chicken, Fish, Meat, Eggs\r\n(5) Milk, Dairy Products\r\n(6) Fats And Oil\r\n(7) Water ");
+
+                int foodGroupNum = Convert.ToInt32(Console.ReadLine());
+                switch (foodGroupNum)
+                {
+                    case 1:
+                        ingredient.FoodGroup = (FoodGroup)Enum.Parse(typeof(FoodGroup), "StarchyFoods");
+                        recipe.Ingredients.Add(ingredient);
+                        break;
+                    case 2:
+                        ingredient.FoodGroup = (FoodGroup)Enum.Parse(typeof(FoodGroup), "VegetablesAndFruits");
+                        recipe.Ingredients.Add(ingredient);
+
+                        break;
+                    case 3:
+                        ingredient.FoodGroup = (FoodGroup)Enum.Parse(typeof(FoodGroup), "DryBeansPeasLentilsSoya");
+                        recipe.Ingredients.Add(ingredient);
+
+                        break;
+                    case 4:
+                        ingredient.FoodGroup = (FoodGroup)Enum.Parse(typeof(FoodGroup), "ChickenFishMeatEggs");
+                        recipe.Ingredients.Add(ingredient);
+
+                        break;
+                    case 5:
+                        ingredient.FoodGroup = (FoodGroup)Enum.Parse(typeof(FoodGroup), "MilkDairyProducts");
+                        recipe.Ingredients.Add(ingredient);
+
+                        break;
+                    case 6:
+                        ingredient.FoodGroup = (FoodGroup)Enum.Parse(typeof(FoodGroup), "FatsAndOil");
+                        recipe.Ingredients.Add(ingredient);
+
+                        break;
+                    case 7:
+                        ingredient.FoodGroup = (FoodGroup)Enum.Parse(typeof(FoodGroup), "Water");
+                        recipe.Ingredients.Add(ingredient);
+
+                        break;
+                    case 8:
+                        Environment.Exit(0);
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice!");
+
+                        break;
+
+
+                }
+
+
+
             }
 
             Console.Write("Enter the number of steps: ");
-            numSteps = int.Parse(Console.ReadLine());
+            int stepCount = Convert.ToInt32(Console.ReadLine());
 
-            steps = new string[numSteps];
-
-            for (int i = 0; i < numSteps; i++)
+            for (int i = 0; i < stepCount; i++)
             {
-                Console.Write("Enter step #{0}: ", i + 1);
-                steps[i] = Console.ReadLine();
+                Console.Write($"Enter step #{i + 1}: ");
+                string step = Console.ReadLine();
+                recipe.Steps.Add(step);
             }
+
+            recipeApp.AddRecipe(recipe);
+
+            Console.WriteLine("Recipe added successfully!");
         }
-        //-----------------------------------------------------------EndOfMethod------------------------------------------------------------------------------
+        //==================== EndOfMethod =========================================================================================================
 
-
-        /// <summary>
-        /// this method displays the ingredients and steps, essentially showing the user everything that they have entered
-        /// </summary>
-
-        public void DisplayRecipe()
+        //=========================== Method to scale a recipe =====================================================================================
+        static void ScaleRecipe(RecipeApp recipeApp)
         {
-            Console.WriteLine("Ingredients:");
+            Console.Write("Enter recipe name: ");
+            string recipeName = Console.ReadLine();
+            double factor = 1;
 
-            for (int i = 0; i < numIngredients; i++)
-            {
-                Console.WriteLine("- {0} {1} of {2}", ingredientQuantities[i], ingredientUnits[i], ingredientNames[i]);
-            }
-
-            Console.WriteLine("Steps:");
-
-            for (int i = 0; i < numSteps; i++)
-            {
-                Console.WriteLine("{0}. {1}", i + 1, steps[i]);
-            }
+            recipeApp.ScaleRecipe(recipeName, factor);
         }
-        //-----------------------------------------------------------EndOfMethod------------------------------------------------------------------------------
+        //==================== EndOfMethod =========================================================================================================
 
-
-
-        /// <summary>
-        /// this method uses the variable "factor" to scale the quantites of the user's ingredients to either 0.5, 2 or 3 times
-        /// </summary>
-        /// <param name="factor"></param>
-
-
-        public void ScaleRecipe(double factor)
+        //============================= Method to reset recipe quantities ==========================================================================
+        static void ResetRecipeQuantities(RecipeApp recipeApp)
         {
-            for (int i = 0; i < numIngredients; i++)
-            {
-                ingredientQuantities[i] *= factor;
-            }
+            Console.Write("Enter recipe name: ");
+            string recipeName = Console.ReadLine();
+
+            recipeApp.ResetRecipe(recipeName);
         }
-        //-----------------------------------------------------------EndOfMethod------------------------------------------------------------------------------
-        /// <summary>
-        /// this method resets the quantites if either after a user scales their quantities or changes their quantites to the originally entered quantities
-        /// </summary>
-        public void ResetQuantities()
+        //==================== EndOfMethod =========================================================================================================
+
+        //==================== Method to clear/reset a recipe ======================================================================================
+        static void ClearRecipe(RecipeApp recipeApp)
         {
-            for (int i = 0; i < numIngredients; i++)
-            {
-                // Restore the original quantities
-                if (ingredientQuantities[i] != originalQuantities[i])
-                {
+            Console.Write("Enter recipe name: ");
+            string recipeName = Console.ReadLine();
 
-                    ingredientQuantities[i] = originalQuantities[i];
-
-                }
-            }
-            //-----------------------------------------------------------EndOfMethod------------------------------------------------------------------------------
+            recipeApp.ClearRecipe(recipeName);
         }
+        //==================== EndOfMethod =========================================================================================================
 
 
-        /// <summary>
-        /// this method reverts every input and sets it to original before any user entry was made
-        /// </summary>
-        public void ClearRecipe()
-        {
-            numIngredients = 0;
-            ingredientNames = null;
-            ingredientQuantities = null;
-            ingredientUnits = null;
-            numSteps = 0;
-            steps = null;
-
-        }
-        //-----------------------------------------------------------EndOfMethod------------------------------------------------------------------------------
     }
-    /// <summary>
-    /// =============================================================END OF CLASS==============================================================================    /// </summary>
-
-    class Program
-    {
-        /// <summary>
-        /// beginning of Main Method
-        /// </summary>
-        /// <param name="args"></param>
-        static void Main(string[] args)
-        {
-            Recipe recipe = new Recipe();
-
-            while (true)
-            {
-                Console.WriteLine("Enter a command:");
-                Console.WriteLine("1. Enter a new recipe");
-                Console.WriteLine("2. Display the recipe");
-                Console.WriteLine("3. Scale the recipe");
-                Console.WriteLine("4. Reset the quantities");
-                Console.WriteLine("5. Clear the recipe");
-                Console.WriteLine("6. Exit");
-
-                int command = int.Parse(Console.ReadLine());
-// switch statement to allow users to make a selection for their recipe application
-
-                switch (command)
-                {
-                    case 1:
-                        recipe.EnterRecipe();
-                        break;
-                    case 2:
-                        recipe.DisplayRecipe();
-                        break;
-                    case 3:
-                        Console.Write("Enter the scale factor: ");
-                        double factor = double.Parse(Console.ReadLine());
-                        recipe.ScaleRecipe(factor);
-                        break;
-                    case 4:
-                        recipe.ResetQuantities();
-                        break;
-                    case 5:
-                        recipe.ClearRecipe();
-                        break;
-                    case 6:
-                        return;
-                    default:
-                        Console.WriteLine("Invalid choice.");
-                        break;
-                }
-            }
-        }
-        //-----------------------------------------------------------EndOfMethod------------------------------------------------------------------------------
-    }
-    //===============================================================END_OF_FILE===============================================================================
+    //==================== EndOfClass ==============================================================================================================
 }
+//=================== EndOfFile=====================================================================================================================
